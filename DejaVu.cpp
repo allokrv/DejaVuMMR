@@ -709,7 +709,7 @@ void DejaVu::Reset()
 	this->orangeTeamRenderData.clear();
 }
 
-void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr = false) {
+void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
 	
 	if (playlist != 0 && IsInRealGame()) {
 		gameWrapper->SetTimeout([steamID, playlist, res, retr, this](GameWrapper* gameWrapper) {
