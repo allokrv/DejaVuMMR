@@ -90,7 +90,7 @@ inline void from_json(const json& j, Record& record) {
 
 class DejaVu : public BakkesMod::Plugin::BakkesModPlugin
 #if ENABLE_GUI
-, public BakkesMod::Plugin::PluginWindow
+	, public BakkesMod::Plugin::PluginWindow
 #endif
 {
 public:
@@ -106,7 +106,7 @@ public:
 	void HandleGameLeave(std::string eventName);
 	void RenderDrawable(CanvasWrapper canvas);
 
-// GUI
+	// GUI
 
 #if ENABLE_GUI
 	void Render() override;
@@ -123,7 +123,7 @@ private:
 	bool isWindowOpen = false;
 	bool shouldBlockInput = false;
 	std::string menuTitle = "Deja Vu";
-	const char* playlists[2] = {"option 1", "option 2"};
+	const char* playlists[2] = { "option 1", "option 2" };
 	bool selected1 = false;
 
 private:
@@ -161,13 +161,14 @@ private:
 	std::vector<RenderData> orangeTeamRenderData;
 
 	inline static auto mainFile = "player_counter.json";
-	inline static auto tmpFile  = "player_counter.json.tmp";
-	inline static auto bakFile  = "player_counter.json.bak";
-	inline static auto logFile  = "dejavu.log";
+	inline static auto tmpFile = "player_counter.json.tmp";
+	inline static auto bakFile = "player_counter.json.bak";
+	inline static auto logFile = "dejavu.log";
 
 	inline static auto dataDir = std::filesystem::path("bakkesmod/data/dejavu");
 	inline static auto mainPath = std::filesystem::path(dataDir).append(mainFile);
 	inline static auto tmpPath = std::filesystem::path(dataDir).append(tmpFile);
+
 	inline static auto bakPath = std::filesystem::path(dataDir).append(bakFile);
 	inline static auto logPath = std::filesystem::path(dataDir).append(logFile);
 

@@ -98,6 +98,7 @@ void DejaVu::HookAndLogEvent(std::string eventName)
 
 void DejaVu::CleanUpJson()
 {
+	return;
 	for (auto player : this->data["players"].items())
 	{
 		json::value_type playerData = player.value();
@@ -358,7 +359,7 @@ void DejaVu::LoadData()
 	}
 
 	try {
-		in >> this->data;
+		//in >> this->data;
 	}
 	catch (const nlohmann::detail::exception& e) {
 		in.close();
@@ -606,10 +607,11 @@ void DejaVu::AddPlayerToRenderData(PriWrapper player)
 	LOG(INFO) << "player team num: " << std::to_string(theirTeamNum);
 	std::string playerName = player.GetPlayerName().ToString();
 	Log("Fetching ranks for: " + playerName);
-	float ranks[3] = { 0, 0, 0 };
+	float ranks[3] = { -1, -1, -1 };
+	auto* ranksPtr = &ranks;
 	if (player.IsPlayer()) {
 		for (int i = 0; i < 3; i++) {
-			GetMMR(player.GetUniqueId(), i + 1, &ranks[i]);
+			GetMMR(player.GetUniqueId(), i + 1, ranksPtr[i]);
 			Log("Player: " + player.GetPlayerName().ToString() + " mode: " + std::to_string(i) + " - " + std::to_string(ranks[i]) + "(" + rankNamer(ranks[i]) + ")");
 		}
 	}
@@ -706,13 +708,20 @@ void DejaVu::Reset()
 }
 
 void DejaVu::GetMMR(SteamID steamID, int playlist, float* res) {
-
-	MMRWrapper mw = this->gameWrapper->GetMMRWrapper();
 	
 	if (playlist != 0) {
 		gameWrapper->SetTimeout([steamID, playlist, res, this](GameWrapper* gameWrapper) {
 			if (1 || (gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist) && !gameWrapper->GetMMRWrapper().IsSyncing(steamID))) {
-				*res = gameWrapper->GetMMRWrapper().GetPlayerMMR(steamID, playlist);
+				float ttemp;
+				auto* tptr = &ttemp;
+				ttemp = gameWrapper->GetMMRWrapper().GetPlayerMMR(steamID, playlist);
+				Log("Got " + std::to_string(ttemp) + " from: " + std::to_string(steamID.ID));
+				if (ttemp == 0.0) {
+					Log("Result: 0.0; Retrying.. " + std::to_string(steamID.ID));
+					GetMMR(steamID, playlist, res);
+					return;
+				}
+				memcpy(res, tptr, sizeof(float));
 			}
 			}, 3);
 	}
@@ -721,7 +730,7 @@ void DejaVu::GetMMR(SteamID steamID, int playlist, float* res) {
 	}
 }
 
-string rankNamer(int rank) {
+string DejaVu::rankNamer(int rank) {
 
 	string fullName = "";
 
