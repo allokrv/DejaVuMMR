@@ -99,6 +99,7 @@ void DejaVu::HookAndLogEvent(std::string eventName)
 void DejaVu::CleanUpJson()
 {
 	return;
+	/*
 	for (auto player : this->data["players"].items())
 	{
 		json::value_type playerData = player.value();
@@ -112,6 +113,7 @@ void DejaVu::CleanUpJson()
 		}
 	}
 	WriteData();
+	*/
 }
 
 void DejaVu::onLoad()
@@ -612,7 +614,7 @@ void DejaVu::AddPlayerToRenderData(PriWrapper player)
 	if (player.IsPlayer()) {
 		for (int i = 0; i < 3; i++) {
 			GetMMR(player.GetUniqueId(), i + 1, ranksPtr[i]);
-			Log("Player: " + player.GetPlayerName().ToString() + " mode: " + std::to_string(i) + " - " + std::to_string(ranks[i]) + "(" + rankNamer(ranks[i]) + ")");
+			Log("Player: " + player.GetPlayerName().ToString() + " mode: " + std::to_string(i) + " - " + std::to_string(ranks[i]) + " (" + rankNamer(ranks[i]) + ")");
 		}
 	}
 	if (theirTeamNum == 0)
@@ -707,21 +709,30 @@ void DejaVu::Reset()
 	this->orangeTeamRenderData.clear();
 }
 
-void DejaVu::GetMMR(SteamID steamID, int playlist, float* res) {
+void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr = false) {
 	
-	if (playlist != 0) {
-		gameWrapper->SetTimeout([steamID, playlist, res, this](GameWrapper* gameWrapper) {
-			if (1 || (gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist) && !gameWrapper->GetMMRWrapper().IsSyncing(steamID))) {
+	if (playlist != 0 && IsInRealGame()) {
+		gameWrapper->SetTimeout([steamID, playlist, res, retr, this](GameWrapper* gameWrapper) {
+			if (gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist && !gameWrapper->GetMMRWrapper().IsSyncing(steamID))) {
 				float ttemp;
 				auto* tptr = &ttemp;
 				ttemp = gameWrapper->GetMMRWrapper().GetPlayerMMR(steamID, playlist);
 				Log("Got " + std::to_string(ttemp) + " from: " + std::to_string(steamID.ID));
 				if (ttemp == 0.0) {
-					Log("Result: 0.0; Retrying.. " + std::to_string(steamID.ID));
-					GetMMR(steamID, playlist, res);
+					Log("Result: 0.0; " + std::to_string(steamID.ID));
 					return;
 				}
 				memcpy(res, tptr, sizeof(float));
+			}
+			else {
+				if (retr) {
+					Log("ERROR: Not syncing.. " + std::to_string(steamID.ID));
+				}
+				else {
+					Log("Still Syncing.. retrying.. " + std::to_string(steamID.ID));
+					GetMMR(steamID, playlist, res, true);
+				}
+				return;
 			}
 			}, 3);
 	}
@@ -1061,6 +1072,7 @@ Rect DejaVu::RenderUI(CanvasWrapper& canvas, Rect area, const std::vector<Render
 			float ranks[3] = { playerRenderData.rankOnes, playerRenderData.rankTwos, playerRenderData.rankTres };
 			for (int i = 0; i < (sizeof(ranks)/sizeof(float)); i++) {
 				mmr += " | " + std::to_string(ranks[i]);
+				mmr += " (" + rankNamer(ranks[i]) + ")";
 			}
 
 		}

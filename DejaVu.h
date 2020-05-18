@@ -179,7 +179,7 @@ private:
 	void WriteData();
 	void Reset();
 	string rankNamer(int rank);
-	void GetMMR(SteamID steamID, int playlist, float* res);
+	void GetMMR(SteamID steamID, int playlist, float* res, bool retr = false);
 	//void GetAndSetMetMMR(SteamID steamID, int playlist, SteamID idToSet);
 	Record GetRecord(SteamID steamID, int playlist, Side side);
 	Record GetRecord(std::string steamID, int playlist, Side side);
