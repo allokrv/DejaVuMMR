@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
+#include "bakkesmod/wrappers/MMRWrapper.h"
 
 #include "vendor\easyloggingpp-9.96.7\src\easylogging++.h"
 
@@ -609,7 +610,7 @@ void DejaVu::AddPlayerToRenderData(PriWrapper player)
 	if (player.IsPlayer()) {
 		for (int i = 0; i < 3; i++) {
 			GetMMR(player.GetUniqueId(), i + 1, &ranks[i]);
-			Log("Player: " + player.GetPlayerName().ToString() + " mode: " + std::to_string(i) + " - " + std::to_string(ranks[i]));
+			Log("Player: " + player.GetPlayerName().ToString() + " mode: " + std::to_string(i) + " - " + std::to_string(ranks[i]) + "(" + rankNamer(ranks[i]) + ")");
 		}
 	}
 	if (theirTeamNum == 0)
@@ -707,18 +708,53 @@ void DejaVu::Reset()
 void DejaVu::GetMMR(SteamID steamID, int playlist, float* res) {
 
 	MMRWrapper mw = this->gameWrapper->GetMMRWrapper();
-	if (!mw.memory_address) { GetMMR(steamID, playlist, res); return; }
-	// null check ?!
-	float mmrValue = 0;
-	if (!mw.IsSynced(steamID, playlist)) {
-		Log("Not synced yet: " + std::to_string(steamID.ID));
-		Sleep(250);
-		GetMMR(steamID, playlist, res);
+	
+	if (playlist != 0) {
+		gameWrapper->SetTimeout([steamID, playlist, res, this](GameWrapper* gameWrapper) {
+			if (1 || (gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist) && !gameWrapper->GetMMRWrapper().IsSyncing(steamID))) {
+				*res = gameWrapper->GetMMRWrapper().GetPlayerMMR(steamID, playlist);
+			}
+			}, 3);
+	}
+	else {
 		return;
-	} else {
-		float mmrValue = mw.GetPlayerMMR(steamID, playlist);
-		Log(std::to_string(steamID.ID) + std::to_string(mmrValue));
-		*res = mmrValue;
+	}
+}
+
+string rankNamer(int rank) {
+
+	string fullName = "";
+
+	// Thanks Brank for cleaning this up
+	string rankNames[] =
+	{
+		"Unranked",
+		"Bronze 1",
+		"Bronze 2",
+		"Bronze 3",
+		"Silver 1",
+		"Silver 2",
+		"Silver 3",
+		"Gold 1",
+		"Gold 2",
+		"Gold 3",
+		"Platinum 1",
+		"Platinum 2",
+		"Platinum 3",
+		"Diamond 1",
+		"Diamond 2",
+		"Diamond 3",
+		"Champion 1",
+		"Champion 2",
+		"Champion 3",
+		"Grand Champion"
+	};
+
+	if (rank < 0 || rank > 19) {
+		return "ERROR";
+	}
+	else {
+		return rankNames[rank];
 	}
 }
 
