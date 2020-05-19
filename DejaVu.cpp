@@ -213,7 +213,7 @@ void DejaVu::onLoad()
 	RegisterCVar("cl_dejavu_background_color_g", "Background color: Green", 0, this->backgroundColorG);
 	RegisterCVar("cl_dejavu_background_color_b", "Background color: Blue", 0, this->backgroundColorB);
 
-	auto logCVar = RegisterCVar("cl_dejavu_log", "Enables logging", false, this->enabledLog);
+	auto logCVar = RegisterCVar("cl_dejavu_log", "Enables logging", true, this->enabledLog);
 	logCVar.addOnValueChanged([this](std::string oldValue, CVarWrapper cvar) {
 		bool val = cvar.getBoolValue();
 
@@ -462,7 +462,7 @@ void DejaVu::HandlePlayerAdded(std::string eventName)
 	// Too early I guess, so bail since we need the match guid for tracking
 	if (matchGUID == "No worldInfo")
 		return;
-	MMRWrapper mw = this->gameWrapper->GetMMRWrapper();
+	MMRWrapper mw = gameWrapper->GetMMRWrapper();
 	ArrayWrapper<PriWrapper> pris = server.GetPRIs();
 
 	int len = pris.Count();
@@ -511,6 +511,10 @@ void DejaVu::HandlePlayerAdded(std::string eventName)
 			// Skip self
 			if (steamID.ID == localSteamID.ID) {
 				continue;
+
+			// If we've already added him to the list, return
+			if (this->currentMatchPRIs.count(steamIDStr) != 0)
+				return;
 			//} else
 			//{
 			//	this->gameWrapper->LogToChatbox(std::to_string(steamID.ID) + " != " + std::to_string(localSteamID.ID));
@@ -524,10 +528,12 @@ void DejaVu::HandlePlayerAdded(std::string eventName)
 			if (steamID.ID == 0)
 			{
 				//playerName = "[BOT]";
+				Log("(Skipping..)");
 				continue;
 			}
 
-			int curPlaylist = mw.GetCurrentPlaylist();
+			auto mmr = gameWrapper->GetMMRWrapper();
+			int curPlaylist = mmr.GetCurrentPlaylist();
 
 			//GetAndSetMetMMR(localSteamID, curPlaylist, steamID);
 
@@ -581,10 +587,8 @@ void DejaVu::HandlePlayerAdded(std::string eventName)
 void DejaVu::AddPlayerToRenderData(PriWrapper player)
 {
 	auto steamID = player.GetUniqueId().ID;
+	Log("Not Fetching ranks yet - " + steamID);
 	std::string steamIDStr = std::to_string(steamID);
-	// If we've already added him to the list, return
-	if (this->currentMatchPRIs.count(steamIDStr) != 0)
-		return;
 	auto server = GetCurrentServer();
 	auto myTeamNum = server.GetLocalPrimaryPlayer().GetPRI().GetTeamNum();
 	auto theirTeamNum = player.GetTeamNum();
@@ -621,6 +625,7 @@ void DejaVu::AddPlayerToRenderData(PriWrapper player)
 		this->blueTeamRenderData.push_back({ steamIDStr, playerName, metCount, record, ranks[0], ranks[1], ranks[2] });
 	else
 		this->orangeTeamRenderData.push_back({ steamIDStr, playerName, metCount, record, ranks[0], ranks[1], ranks[2] });
+	delete[] ranks;
 }
 
 void DejaVu::RemovePlayerFromRenderData(PriWrapper player)
@@ -710,19 +715,43 @@ void DejaVu::Reset()
 }
 
 void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
-	
+
+	auto ress = *res;
+	Log("Test for MMR in DejaVu: " + std::to_string(ress));
+
+	if (!gameWrapper)
+		Log("GameWrapper Nullcheck trigger.");
+		return;
+	ServerWrapper sw = gameWrapper->GetOnlineGame();
+	if (sw.IsNull() || !sw.IsOnlineMultiplayer() || gameWrapper->IsInReplay()) {
+		Log("Server / Game Nullcheck trigger.");
+		return;
+	}
+
 	if (playlist != 0 && IsInRealGame()) {
-		gameWrapper->SetTimeout([steamID, playlist, res, retr, this](GameWrapper* gameWrapper) {
-			if (gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist && !gameWrapper->GetMMRWrapper().IsSyncing(steamID))) {
+		gameWrapper->SetTimeout([steamID, playlist, res, retr, this](GameWrapper* gameWrapper) mutable {
+			MMRWrapper mmrw = gameWrapper->GetMMRWrapper();
+			if ((/*gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist) && */ !mmrw.IsSyncing(steamID))) {
 				float ttemp;
 				auto* tptr = &ttemp;
-				ttemp = gameWrapper->GetMMRWrapper().GetPlayerMMR(steamID, playlist);
-				Log("Got " + std::to_string(ttemp) + " from: " + std::to_string(steamID.ID));
+
+				if (!gameWrapper)
+					Log("GameWrapper is null | DJVMMR");
+					return;
+
+				try {
+					ttemp = mmrw.GetPlayerMMR(steamID, playlist);
+				}
+				catch (const exception & e) {
+					Log("Error while getting rank (Access Violation?)");
+				}
+				Log("MMR Value Received: " + std::to_string(ttemp) + " |from: " + std::to_string(steamID.ID));
 				if (ttemp == 0.0) {
 					Log("Result: 0.0; " + std::to_string(steamID.ID));
 					return;
+				} else {
+					memcpy(res, tptr, sizeof(float));
 				}
-				memcpy(res, tptr, sizeof(float));
 			}
 			else {
 				if (retr) {
@@ -738,7 +767,7 @@ void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
 	}
 	else {
 		return;
-	}
+		}
 }
 
 string DejaVu::rankNamer(int rank) {
