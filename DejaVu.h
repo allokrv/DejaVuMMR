@@ -178,6 +178,7 @@ private:
 	void LoadData();
 	void WriteData();
 	void Reset();
+	void LogMe(string prin);
 	string rankNamer(int rank);
 	void GetMMR(SteamID steamID, int playlist, float* res, bool retr = false);
 	//void GetAndSetMetMMR(SteamID steamID, int playlist, SteamID idToSet);

@@ -714,7 +714,7 @@ void DejaVu::Reset()
 }
 
 void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
-
+	Log("GetMMR start");
 	if (!gameWrapper)
 		Log("GameWrapper Nullcheck trigger.");
 		return;
@@ -723,25 +723,27 @@ void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
 		Log("Server / Game Nullcheck trigger.");
 		return;
 	}
+	Log("Still alive?");
 
 	if (playlist != 0 && IsInRealGame()) {
+		Log("in if playlist (getMMR)");
 		gameWrapper->SetTimeout([steamID, playlist, res, retr, this](GameWrapper* gameWrapper) mutable {
+			Log("test from Lambda (getMMR)");
 			MMRWrapper mmrw = gameWrapper->GetMMRWrapper();
-			if ((/*gameWrapper->GetMMRWrapper().IsSynced(steamID, playlist) && */ !mmrw.IsSyncing(steamID))) {
-				float ttemp;
-
-				if (!gameWrapper)
-					Log("GameWrapper is null | DJVMMR");
-					return;
+			if ((!mmrw.IsSyncing(steamID))) {
+				float ttemp = -1.0;
+				Log("ttemp before: " + std::to_string(ttemp));
 
 				try {
+					Log("ttemp before: " + std::to_string(ttemp));
 					ttemp = mmrw.GetPlayerMMR(steamID, playlist);
+					Log("ttemp after: " + std::to_string(ttemp));
 				}
-				catch (const exception & e) {
+				catch (...) {
 					Log("Error while getting rank (Access Violation?)");
 				}
 
-				Log("MMR Value Received: " + std::to_string(ttemp) + " |from: " + std::to_string(steamID.ID));
+				Log("MMR Value Received: " + std::to_string(ttemp) + " | id: " + std::to_string(steamID.ID));
 
 				if (ttemp == -1) {
 					Log("Didn't get MMR; Instead got: " + std::to_string(ttemp) + " | id: " + std::to_string(steamID.ID));
@@ -762,8 +764,10 @@ void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
 				return;
 			}
 			}, 3);
+
 	}
 	else {
+		Log("Bool for actually checking MMR: False!");
 		return;
 		}
 }
