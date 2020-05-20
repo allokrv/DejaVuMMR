@@ -750,7 +750,8 @@ void DejaVu::GetMMR(SteamID steamID, int playlist, float* res, bool retr) {
 					Log("Result: 0.0; " + std::to_string(steamID.ID));
 					return;
 				} else {
-					memcpy(res, tptr, sizeof(float));
+					//memcpy(res, tptr, sizeof(float));
+					Log("Does the memcpy crash the game ? (!)");
 				}
 			}
 			else {
